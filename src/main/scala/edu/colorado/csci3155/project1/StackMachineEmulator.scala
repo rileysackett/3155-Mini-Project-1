@@ -1,6 +1,7 @@
 package edu.colorado.csci3155.project1
 
 import scala.annotation.tailrec
+import scala.math.Equiv.Double.IeeeEquiv
 
 
 
@@ -12,6 +13,25 @@ sealed trait StackMachineInstruction
 
 case class ICondSkip(n: Int) extends StackMachineInstruction
 case class ISkip(n: Int) extends StackMachineInstruction
+// Instruction constructors expected by the tests
+case class IPush(d: Double) extends StackMachineInstruction
+case class IPushBool(b: Boolean) extends StackMachineInstruction
+
+case object IPop extends StackMachineInstruction
+
+case object IPlus extends StackMachineInstruction
+case object ISub extends StackMachineInstruction
+case object IMul extends StackMachineInstruction
+case object IDiv extends StackMachineInstruction
+
+case object IGeq extends StackMachineInstruction
+case object IGt extends StackMachineInstruction
+case object IEq extends StackMachineInstruction
+
+case object INot extends StackMachineInstruction
+
+case class IStore(name: String) extends StackMachineInstruction
+case class ILoad(name: String) extends StackMachineInstruction
 
 object StackMachineEmulator {
 
@@ -34,11 +54,46 @@ object StackMachineEmulator {
         being executed. Division by zero, log of a non negative number
         Throw an exception or assertion violation when error happens.
         TODO: Implement this function.
+        
      */
-    def emulateSingleInstruction(stack: OpStack,
-                                 env: EnvStack,
-                                 ins: StackMachineInstruction): (OpStack, EnvStack) = {
-        ???
+
+    def emulateSingleInstruction(stack: OpStack, env: EnvStack, ins: StackMachineInstruction): (OpStack, EnvStack) = {
+        //todo: implement this function
+        //top of stack is right operand for sub/div
+        //make sure to catch errors: div 0, empty stack, missing identifier for istore/load, type mismatch use getDoubleValue/getBooleanValue
+    ins match
+            case null => (stack, env)
+            case IPush(d) => (Num(d) :: stack, env)
+            case IPushBool(b) => (Bool(b) :: stack, env)
+            case IPop =>
+                if (stack.isEmpty) throw new Exception("Cannot pop from empty stack")
+                else (stack, env.tail)
+            case IPlus =>
+                if (stack.length < 2) throw new Exception("Stack underflow")
+                else (Num(stack.head.getDoubleValue + stack.tail.head.getDoubleValue) :: stack.drop(2), env)
+            case ISub => 
+                if (stack.length < 2) throw new Exception("Stack underflow")
+                else (Num(stack.tail.head.getDoubleValue - stack.head.getDoubleValue) :: stack.drop(2), env)
+            case IMul => 
+                if (stack.length < 2) throw new Exception("Stack underflow")
+                else (Num(stack.head.getDoubleValue * stack.tail.head.getDoubleValue) :: stack.drop(2), env)
+            case IDiv =>
+                if (stack.length < 2) throw new Exception("Stack underflow")
+                else if (stack.head.getDoubleValue == 0) throw new Exception("Div by zero error")
+                else (Num(stack.tail.head.getDoubleValue / stack.head.getDoubleValue) :: stack.drop(2), env)
+
+            case IGeq => (Bool(stack.tail.head.getDoubleValue >= stack.head.getDoubleValue) :: stack.drop(2), env)
+            case IGt => (Bool(stack.tail.head.getDoubleValue > stack.head.getDoubleValue) :: stack.drop(2), env)
+            case IEq => (Bool(stack.tail.head.getDoubleValue == stack.head.getDoubleValue) :: stack.drop(2), env)
+            case INot => (Bool(!stack.head.getBooleanValue) :: stack.tail, env)
+            case IStore(id) =>
+                if (stack.isEmpty) throw new Exception("Cannot pop from empty stack")
+                else (stack.tail, (id, stack.head) :: env)
+            case ILoad(id) =>    env.find(_._1 == id) match {  
+                case Some((_, v)) => (v :: stack, env)  
+                case None => throw new Exception("Unbound identifier error")}
+
+            case _ => throw new Exception("Unknown instruction")
     }
 
     /* Function emulateStackMachine
@@ -79,7 +134,7 @@ object StackMachineEmulator {
                         emulateStackMachine(instructionList.drop(n+1), opStack, runtimeStack)
                     }
 
-                    case null => {
+                    case _ => {
                         /*- Otherwise, just call emulateSingleInstruction -*/
                         val (newOpStack: OpStack, newRuntime:EnvStack) = emulateSingleInstruction(opStack, runtimeStack, ins)
                         emulateStackMachine(instructionList.tail, newOpStack, newRuntime)

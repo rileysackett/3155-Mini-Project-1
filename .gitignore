@@ -1,0 +1,28 @@
+# Ignore build artifacts and IDE/editor metadata
+target/
+.bloop/
+.metals/
+.vscode/
+.idea/
+
+# sbt and compiler artifacts
+/project/target/
+/project/project/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# notebooks and outputs
+*.ipynb_checkpoints
+
+# IntelliJ
+out/
+
+# Ignore Eclipse/IDE files
+.classpath
+.project
+.settings/
+
+# don't accidentally commit generated zip or submission files
+submission.zip
