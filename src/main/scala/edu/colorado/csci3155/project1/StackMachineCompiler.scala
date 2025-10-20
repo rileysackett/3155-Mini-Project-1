@@ -24,10 +24,24 @@ object StackMachineCompiler {
             case Eq(l, r) => compileToStackMachineCode(l) ++ compileToStackMachineCode(r) ++ List(IEq)
             case Not(x) => compileToStackMachineCode(x) ++ List(INot)
             case Let(id, e1, e2) => 
-                val v1 = compileToStackMachineCode(e1)
-                val v2 = compileToStackMachineCode(e2)
-                v1 ++ List(IStore(id)) ++ v2 ++ List(IPop)
-            case _ => throw new Exception("Not implemented yet")
+                val init = compileToStackMachineCode(e1)
+                val body = compileToStackMachineCode(e2)
+                init ++ List(IStore(id)) ++ body ++ List(IPop)
+            case IfThenElse(cond, tExpr, elseExpr) =>
+                val condCode = compileToStackMachineCode(cond)
+                val thenCode = compileToStackMachineCode(tExpr)
+                val elseCode = compileToStackMachineCode(elseExpr)
+                condCode ++ List(ICondSkip(thenCode.length + 1)) ++ thenCode ++ List(ISkip(elseCode.length)) ++ elseCode
+            case And(l, r) =>
+                val lc = compileToStackMachineCode(l)
+                val rc = compileToStackMachineCode(r)
+                lc ++ List(ICondSkip(rc.length + 1)) ++ rc ++ List(ISkip(1)) ++ List(IPushBool(false))
+            case Or(l, r) =>
+                val lc2 = compileToStackMachineCode(l)
+                val rc2 = compileToStackMachineCode(r)
+                val shortCircuit = List(IPushBool(true), ISkip(rc2.length))
+                lc2 ++ List(ICondSkip(shortCircuit.length)) ++ shortCircuit ++ rc2
+            case null => throw new Exception("Null expression")
     }
 
 }
